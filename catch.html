@@ -1,0 +1,197 @@
+<head>
+  <!-- <script type="text/javascript" src="https://oss.sheetjs.com/sheetjs/xlsx.full.min.js"></script> -->
+  <style>
+    table,
+    td {
+      border: 1px solid #333;
+    }
+  </style>
+</head>
+<body>
+  <button>平均氣溫</button>
+  <button>平均總日照時數(d/m)</button>
+  <button>平均相對濕度(%)</button>
+  <hr />
+  <table>
+    <tbody class="main"></tbody>
+  </table>
+  <!-- <button onclick="btn_export()">匯出</button> -->
+</body>
+<script
+  type="text/javascript"
+  src="https://oss.sheetjs.com/sheetjs/xlsx.full.min.js"
+></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.0/FileSaver.min.js"
+  integrity="sha512-csNcFYJniKjJxRWRV1R7fvnXrycHP6qDR21mgz1ZP55xY5d+aHLfo9/FcGDQLfn2IfngbAHd8LdfsagcCqgTcQ=="
+  crossorigin="anonymous"
+></script>
+<script
+  src="https://cdnjs.cloudflare.com/ajax/libs/TableExport/5.2.0/js/tableexport.min.js"
+  integrity="sha512-XmZS54be9JGMZjf+zk61JZaLZyjTRgs41JLSmx5QlIP5F+sSGIyzD2eJyxD4K6kGGr7AsVhaitzZ2WTfzpsQzg=="
+  crossorigin="anonymous"
+></script>
+<script>
+  // function btn_export() {
+  //   let Tabulator = require('tabulator-tables');
+  //   let table1 = new Tabulator("#table")
+  //   table1.download("xlsx","data.xlsx",{sheetName:"Mydata"})
+  //   // let sheet = XLSX.utils.table_to_sheet(table1); //將一個table物件轉換成一個sheet物件
+  //   // openDownloadDialog(sheet2blob(sheet), "下載.xlsx");
+  // }
+
+  window.onload = function () {
+    // function f(){
+    //   console.log(5)
+    // }
+
+    let id = 0;
+    // let big_table = document.getElementsByTagName("table")[0].getElementsByTagName("caption");
+    let table = document.getElementsByClassName("main")[0];
+
+    let title = document.createElement("tr");
+    let title_head = document.createElement("td");
+    let data1 =
+    "https://opendata.cwb.gov.tw/api/v1/rest/datastore/C-B0027-001?Authorization=CWB-6DB1B8BA-C3F5-49F7-8443-999865A34532&weatherElement=temperature";
+    let data2 =
+    "https://opendata.cwb.gov.tw/api/v1/rest/datastore/C-B0027-001?Authorization=CWB-6DB1B8BA-C3F5-49F7-8443-999865A34532&weatherElement=sunshineDuration";
+    let data3 =
+    "https://opendata.cwb.gov.tw/api/v1/rest/datastore/C-B0027-001?Authorization=CWB-6DB1B8BA-C3F5-49F7-8443-999865A34532&weatherElement=relativeHumidity";
+    title_head.innerHTML = "觀測站";
+    table.appendChild(title_head);
+
+    let button = document.getElementsByTagName("button");
+
+    remove_data();
+
+    for (let i = 0; i < button.length; i++) {
+      button[i].addEventListener("click", () => {
+        id = i;
+        remove_data();
+        catch_api();
+      });
+    }
+
+
+    function remove_data() {
+      if(document.getElementsByTagName("caption").length>0){
+        document.getElementsByTagName("caption")[0].remove();
+      }
+      table.innerHTML = "";
+      title.innerHTML = "";
+      title_head.innerHTML = "觀測站";
+      title.appendChild(title_head);
+      for (let i = 1; i < 13; i++) {
+        let month = document.createElement("td");
+        month.innerHTML = i.toString() + "月";
+        title.appendChild(month);
+      }
+      table.appendChild(title);
+    }
+
+    function collect_data(api) {
+      return fetch(api)
+      .then((data) => {
+        return data.json();
+      })
+      .then((data) => {
+        return data.records.data.surfaceObs.location;
+      });
+    }
+
+    // new TableExport(document.getElementsByTagName("table"));
+
+    let temperature = null
+    let sunshine = null
+    let humidity = null
+
+
+    function run_data(){
+      temperature = collect_data(data1);
+      sunshine = collect_data(data2);
+      humidity = collect_data(data3);
+      return Promise.all([temperature,sunshine,humidity])
+    }
+    
+    let data = null
+
+    async function run_server(){
+      data = await run_data();
+      catch_api()
+    }
+
+    run_server()
+    
+    // run_data().then((v)=>{
+    //   data = v
+    //   catch_api();
+    // })
+
+
+    function catch_api() {
+      if (id == 0) {
+        catch_data(data[0]);
+      }
+      if (id == 1) {
+        catch_data_total(data[1]);
+      }
+      if (id == 2) {
+        catch_data_hu(data[2]);
+      }
+      new TableExport(document.getElementsByTagName("table"));
+      // let exportData = a.getExportData()
+    }
+
+
+    function catch_data(loc) {
+      loc.forEach((e) => {
+        let place_container = document.createElement("tr");
+        let place = document.createElement("td");
+        place.innerHTML = e.station.stationName;
+        place_container.appendChild(place);
+        for (let i = 0; i < 12; i++) {
+          let temp = document.createElement("td");
+          temp.innerHTML =
+            e.stationObsStatistics.temperature.monthly[i].mean + " ";
+          place_container.appendChild(temp);
+        }
+        table.appendChild(place_container);
+      });
+    }
+
+    function catch_data_total(loc) {
+      loc.forEach((e) => {
+        let place_container = document.createElement("tr");
+        let place = document.createElement("td");
+        place.innerHTML = e.station.stationName;
+        place_container.appendChild(place);
+        for (let i = 0; i < 12; i++) {
+          let temp = document.createElement("td");
+          temp.innerHTML =
+            Math.round(
+              e.stationObsStatistics.sunshineDuration.monthly[i].total / 24
+            ) + " ";
+          place_container.appendChild(temp);
+        }
+        table.appendChild(place_container);
+      });
+    }
+
+    function catch_data_hu(loc) {
+      loc.forEach((e) => {
+        let place_container = document.createElement("tr");
+        let place = document.createElement("td");
+        place.innerHTML = e.station.stationName;
+        place_container.appendChild(place);
+        for (let i = 0; i < 12; i++) {
+          let temp = document.createElement("td");
+          temp.innerHTML =
+            e.stationObsStatistics.relativeHumidity.monthly[i].mean + " ";
+          place_container.appendChild(temp);
+        }
+        table.appendChild(place_container);
+      });
+    }
+  };
+</script>
