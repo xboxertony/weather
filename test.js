@@ -10,3 +10,4 @@ let data = require("./data_result.js")
 
 console.log(JSON.stringify(data))
 console.log("aa")
+console.log("bb")
