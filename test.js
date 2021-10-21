@@ -9,3 +9,4 @@ let data = require("./data_result.js")
 // console.log(result)
 
 console.log(JSON.stringify(data))
+console.log("aa")
